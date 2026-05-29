@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 function decodeJwtPayload(token) {
   try {
-    const base64 = token.split('.')[1];
-    const json = Buffer.from(base64, 'base64').toString('utf-8');
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = atob(base64);
     return JSON.parse(json);
   } catch {
     return null;
