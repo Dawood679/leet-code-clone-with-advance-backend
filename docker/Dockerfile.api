@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package.json ./
+COPY apps/api/package.json ./apps/api/
+COPY packages/db/package.json ./packages/db/
+
+RUN npm install --workspaces --include-workspace-root
+
+COPY packages/db ./packages/db
+RUN cd packages/db && npx prisma generate
+
+COPY apps/api ./apps/api
+
+EXPOSE 4000
+
+CMD ["node", "apps/api/src/index.js"]

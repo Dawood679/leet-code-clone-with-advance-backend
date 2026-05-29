@@ -1,0 +1,95 @@
+version: '3.8'
+
+# Replace DOCKERHUB_USER with your actual Docker Hub username
+# Run with: IMAGE_TAG=<build-number> docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  judge0-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: judge0
+      POSTGRES_USER: judge0
+      POSTGRES_PASSWORD: ${JUDGE0_DB_PASSWORD}
+    volumes:
+      - judge0-db-data:/var/lib/postgresql/data
+    restart: always
+
+  judge0-redis:
+    image: redis:6.0
+    restart: always
+
+  judge0-server:
+    image: judge0/judge0:1.13.1
+    ports:
+      - '2358:2358'
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    env_file:
+      - ./judge0.conf
+    privileged: true
+    restart: always
+
+  judge0-workers:
+    image: judge0/judge0:1.13.1
+    command: ['./scripts/workers']
+    depends_on:
+      - judge0-db
+      - judge0-redis
+    env_file:
+      - ./judge0.conf
+    privileged: true
+    restart: always
+
+  api:
+    image: ${DOCKERHUB_USER:-yourusername}/leet-clone-api:${IMAGE_TAG:-latest}
+    ports:
+      - '4000:4000'
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - REDIS_URL=redis://redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JUDGE0_URL=http://judge0-server:2358
+      - WEB_URL=${WEB_URL}
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  worker:
+    image: ${DOCKERHUB_USER:-yourusername}/leet-clone-worker:${IMAGE_TAG:-latest}
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379
+      - JUDGE0_URL=http://judge0-server:2358
+      - NODE_ENV=production
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: always
+
+  web:
+    image: ${DOCKERHUB_USER:-yourusername}/leet-clone-web:${IMAGE_TAG:-latest}
+    ports:
+      - '3000:3000'
+    environment:
+      - API_URL=http://api:4000
+      - NEXT_PUBLIC_WS_URL=${WEB_WS_URL:-http://localhost:4000}
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  judge0-db-data:
