@@ -4,7 +4,10 @@ import { io } from 'socket.io-client';
 import Cookies from 'js-cookie';
 import api from '@/lib/api';
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
+function getWsUrl() {
+  if (typeof window === 'undefined') return 'http://localhost:4000';
+  return `${window.location.protocol}//${window.location.hostname}:4000`;
+}
 
 export function useSubmission() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,7 +18,7 @@ export function useSubmission() {
     const token = Cookies.get('access_token');
     if (!token) return;
 
-    const socket = io(`${WS_URL}/submissions`, {
+    const socket = io(`${getWsUrl()}/submissions`, {
       auth: { token },
       transports: ['websocket']
     });
