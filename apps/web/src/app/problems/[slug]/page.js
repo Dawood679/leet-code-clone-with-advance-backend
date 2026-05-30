@@ -3,10 +3,19 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import api from '@/lib/api';
 import ProblemDescription from '@/components/problems/ProblemDescription';
+import SolutionsPanel from '@/components/problems/SolutionsPanel';
+import AIHelpPanel from '@/components/problems/AIHelpPanel';
 import CodeEditor from '@/components/problems/CodeEditor';
 import VerdictPanel from '@/components/problems/VerdictPanel';
 import { useSubmission } from '@/hooks/useSubmission';
 import { LANGUAGES, STARTER_CODE } from '@/lib/constants';
+
+const TABS = [
+  { id: 'description', label: 'Description' },
+  { id: 'solutions', label: 'Solutions' },
+  { id: 'ai-help', label: 'AI Help' },
+  { id: 'result', label: 'Result' },
+];
 
 export default function ProblemPage() {
   const { slug } = useParams();
@@ -20,20 +29,25 @@ export default function ProblemPage() {
 
   useEffect(() => {
     api.get(`/problems/${slug}`)
-      .then(({ data }) => setProblem(data.problem))
+      .then(({ data }) => {
+        setProblem(data.problem);
+        const starter = data.problem?.starterCode?.python;
+        if (starter) setCode(starter);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [slug]);
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
-    setCode(STARTER_CODE[lang]);
+    const starter = problem?.starterCode?.[lang];
+    setCode(starter || STARTER_CODE[lang]);
   };
 
   const handleSubmit = async () => {
     if (!problem) return;
     await submitCode(problem.id, code, language);
-    setActiveTab('verdict');
+    setActiveTab('result');
   };
 
   if (loading) {
@@ -58,17 +72,17 @@ export default function ProblemPage() {
       <div className="w-[45%] min-w-0 flex flex-col border-r border-gray-200 dark:border-gray-800">
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-          {['description', 'verdict'].map(tab => (
+          {TABS.map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors ${
-                activeTab === tab
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+                activeTab === tab.id
                   ? 'text-brand border-b-2 border-brand'
                   : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               }`}
             >
-              {tab === 'verdict' && verdict ? (
+              {tab.id === 'result' && verdict ? (
                 <span className="flex items-center gap-1.5">
                   Result
                   {verdict.status === 'ACCEPTED' && <span className="text-green-500 text-xs">✓</span>}
@@ -76,15 +90,18 @@ export default function ProblemPage() {
                     <span className="text-red-500 text-xs">✗</span>
                   )}
                 </span>
-              ) : tab}
+              ) : tab.label}
             </button>
           ))}
         </div>
 
         <div className="flex-1 overflow-hidden">
-          {activeTab === 'description' ? (
-            <ProblemDescription problem={problem} />
-          ) : (
+          {activeTab === 'description' && <ProblemDescription problem={problem} />}
+          {activeTab === 'solutions' && (
+            <SolutionsPanel solutions={problem.solutions} currentLanguage={language} />
+          )}
+          {activeTab === 'ai-help' && <AIHelpPanel slug={problem.slug} />}
+          {activeTab === 'result' && (
             <div className="h-full overflow-y-auto">
               {verdict ? (
                 <VerdictPanel verdict={verdict} />

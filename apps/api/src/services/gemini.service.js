@@ -4,9 +4,7 @@ const { GEMINI_API_KEY } = require('../config');
 let genAI;
 
 function getGenAI() {
-  if (!genAI) {
-    genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  }
+  if (!genAI) genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
   return genAI;
 }
 
@@ -48,4 +46,30 @@ The input and expectedOutput should match what the problem expects.`;
   return testCases.slice(0, 10);
 }
 
-module.exports = { generateTestCases };
+async function problemAiHelp(problem, userMessage, history = []) {
+  const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+  const historyText = history.length
+    ? history.map(h => `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}`).join('\n') + '\n'
+    : '';
+
+  const prompt = `You are a helpful coding tutor on a LeetCode-style platform.
+
+Problem: ${problem.title} (${problem.difficulty})
+Description: ${problem.description}
+${problem.constraints ? `Constraints: ${problem.constraints}` : ''}
+
+Rules:
+- Be concise (2-4 sentences max unless showing code)
+- Guide with hints first — don't give full solutions unless user explicitly asks
+- If user asks "show solution" or "give me code", provide a clean commented solution
+- Use markdown backticks for code snippets
+
+${historyText}User: ${userMessage}
+Assistant:`;
+
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
+}
+
+module.exports = { generateTestCases, problemAiHelp };

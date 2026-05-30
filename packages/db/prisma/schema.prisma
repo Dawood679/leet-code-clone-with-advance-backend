@@ -47,6 +47,8 @@ model Problem {
   examples      Json
   testCases     Json
   tags          String[]
+  starterCode   Json?
+  solutions     Json?
   acceptedCount Int          @default(0)
   totalCount    Int          @default(0)
   createdAt     DateTime     @default(now())
