@@ -5,8 +5,8 @@ import Cookies from 'js-cookie';
 import api from '@/lib/api';
 
 function getWsUrl() {
-  if (typeof window === 'undefined') return 'http://localhost:4000';
-  return `${window.location.protocol}//${window.location.hostname}:4000`;
+  if (typeof window === 'undefined') return 'http://localhost:4001';
+  return `${window.location.protocol}//${window.location.hostname}:4001`;
 }
 
 export function useSubmission() {
