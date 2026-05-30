@@ -76,7 +76,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.web
     ports:
-      - '6000:3000'
+      - '8080:3000'
     environment:
       - API_URL=http://api:4000
       - HOSTNAME=0.0.0.0
