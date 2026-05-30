@@ -1,17 +1,6 @@
 version: '3.8'
 
 services:
-  # App Redis (for BullMQ)
-  redis:
-    image: redis:7-alpine
-    ports:
-      - '6379:6379'
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   # Judge0 dependencies
   judge0-db:
     image: postgres:13
@@ -61,14 +50,13 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=${REDIS_URL}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - JUDGE0_URL=http://judge0-server:2358
       - WEB_URL=http://localhost:3000
       - NODE_ENV=development
     depends_on:
-      redis:
-        condition: service_healthy
+      - judge0-server
     restart: on-failure
 
   # Our Worker
@@ -78,14 +66,11 @@ services:
       dockerfile: docker/Dockerfile.worker
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=${REDIS_URL}
       - JUDGE0_URL=http://judge0-server:2358
       - NODE_ENV=development
     depends_on:
-      redis:
-        condition: service_healthy
-      judge0-server:
-        condition: service_started
+      - judge0-server
     restart: on-failure
 
   # Our Web (Next.js)
